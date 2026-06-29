@@ -224,16 +224,21 @@ fun BattleScreen(viewModel: GameViewModel) {
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .background(PlotColor, RoundedCornerShape(4.dp))
-                        .border(1.5.dp, TextBrushColor, RoundedCornerShape(4.dp)),
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(Color(0xFFE5D5B3), Color(0xFFC7B38A))
+                            ),
+                            shape = CircleShape
+                        )
+                        .border(2.dp, Color(0xFF8B7355), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "斗",
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Serif,
-                        color = TextBrushColor
+                        color = Color(0xFF3D2E20)
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -244,14 +249,28 @@ fun BattleScreen(viewModel: GameViewModel) {
                 }
             }
 
-            // Wave display
-            Text(
-                text = "巨鹿 第 $waveNumber 波",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Serif,
-                color = TextBrushColor
-            )
+            // Wave display scroll
+            Box(
+                modifier = Modifier
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            colors = listOf(Color(0xFFC7A774), Color(0xFFF9F3E5), Color(0xFFC7A774))
+                        ),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .border(1.5.dp, Color(0xFF6E5638), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 24.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "巨 鹿  第 $waveNumber 波",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif,
+                    color = Color(0xFF2C1E14),
+                    textAlign = TextAlign.Center
+                )
+            }
 
             // Right peaches counter
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -264,16 +283,21 @@ fun BattleScreen(viewModel: GameViewModel) {
                 Box(
                     modifier = Modifier
                         .size(36.dp)
-                        .background(PlotColor, RoundedCornerShape(4.dp))
-                        .border(1.5.dp, TextBrushColor, RoundedCornerShape(4.dp)),
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(Color(0xFFE5D5B3), Color(0xFFC7B38A))
+                            ),
+                            shape = CircleShape
+                        )
+                        .border(2.dp, Color(0xFF8B7355), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "斗",
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Serif,
-                        color = TextBrushColor
+                        color = Color(0xFF3D2E20)
                     )
                 }
             }
@@ -363,15 +387,45 @@ fun BattleScreen(viewModel: GameViewModel) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val cellPx = cellSize.toPx()
 
+                    fun drawStoneFence(x1: Float, y1: Float, x2: Float, y2: Float, isHorizontal: Boolean) {
+                        val stoneColor = Color(0xFF7E6F56)
+                        val stoneOutlineColor = Color(0xFF4E4331)
+                        val length = if (isHorizontal) x2 - x1 else y2 - y1
+                        val stoneSize = 6.dp.toPx()
+                        val numStones = (length / stoneSize).toInt().coerceAtLeast(3)
+                        val step = length / numStones
+                        for (i in 0 until numStones) {
+                            val center = if (isHorizontal) {
+                                Offset(x1 + i * step + step / 2f, y1)
+                            } else {
+                                Offset(x1, y1 + i * step + step / 2f)
+                            }
+                            drawCircle(
+                                color = stoneColor,
+                                radius = 3.5f.dp.toPx(),
+                                center = center
+                            )
+                            drawCircle(
+                                color = stoneOutlineColor,
+                                radius = 3.5f.dp.toPx(),
+                                center = center,
+                                style = Stroke(width = 1.dp.toPx())
+                            )
+                        }
+                    }
+
                     // Draw Grass, Paths, and Buildable Plots
                     for (c in 0 until viewModel.colsCount) {
                         for (r in 0 until viewModel.rowsCount) {
                             val left = c * cellPx
                             val top = r * cellPx
 
+                            val isPath = viewModel.isPathCell(c, r)
+                            val isPlot = viewModel.isBuildablePlot(c, r)
+
                             val color = when {
-                                viewModel.isBuildablePlot(c, r) -> PlotColor
-                                viewModel.isPathCell(c, r) -> PathColor
+                                isPlot -> PlotColor
+                                isPath -> PathColor
                                 else -> GrassColor
                             }
 
@@ -381,21 +435,55 @@ fun BattleScreen(viewModel: GameViewModel) {
                                 size = Size(cellPx, cellPx)
                             )
 
-                            // Draw rough borders for path cells (stone fences)
-                            if (viewModel.isPathCell(c, r)) {
+                            if (isPlot) {
+                                // Double border for buildable plot
                                 drawRect(
-                                    color = StoneBorderColor,
-                                    topLeft = Offset(left, top),
-                                    size = Size(cellPx, cellPx),
+                                    color = Color(0xFFC7B28A),
+                                    topLeft = Offset(left + 2.dp.toPx(), top + 2.dp.toPx()),
+                                    size = Size(cellPx - 4.dp.toPx(), cellPx - 4.dp.toPx()),
                                     style = Stroke(width = 1.dp.toPx())
                                 )
-                            } else {
-                                drawRect(
-                                    color = Color.LightGray.copy(alpha = 0.5f),
-                                    topLeft = Offset(left, top),
-                                    size = Size(cellPx, cellPx),
-                                    style = Stroke(width = 0.5f.dp.toPx())
+                            } else if (!isPath) {
+                                // Draw watercolor grass details
+                                drawLine(
+                                    color = Color(0xFF7A937E),
+                                    start = Offset(left + cellPx * 0.3f, top + cellPx * 0.4f),
+                                    end = Offset(left + cellPx * 0.35f, top + cellPx * 0.25f),
+                                    strokeWidth = 1.dp.toPx()
                                 )
+                                drawLine(
+                                    color = Color(0xFF7A937E),
+                                    start = Offset(left + cellPx * 0.35f, top + cellPx * 0.25f),
+                                    end = Offset(left + cellPx * 0.45f, top + cellPx * 0.35f),
+                                    strokeWidth = 1.dp.toPx()
+                                )
+                            }
+                        }
+                    }
+
+                    // Draw Stone borders around path
+                    for (c in 0 until viewModel.colsCount) {
+                        for (r in 0 until viewModel.rowsCount) {
+                            if (viewModel.isPathCell(c, r)) {
+                                val left = c * cellPx
+                                val top = r * cellPx
+
+                                // Check Left
+                                if (c == 0 || !viewModel.isPathCell(c - 1, r)) {
+                                    drawStoneFence(left, top, left, top + cellPx, isHorizontal = false)
+                                }
+                                // Check Right
+                                if (c == viewModel.colsCount - 1 || !viewModel.isPathCell(c + 1, r)) {
+                                    drawStoneFence(left + cellPx, top, left + cellPx, top + cellPx, isHorizontal = false)
+                                }
+                                // Check Top
+                                if (r == 0 || !viewModel.isPathCell(c, r - 1)) {
+                                    drawStoneFence(left, top, left + cellPx, top, isHorizontal = true)
+                                }
+                                // Check Bottom
+                                if (r == viewModel.rowsCount - 1 || !viewModel.isPathCell(c, r + 1)) {
+                                    drawStoneFence(left, top + cellPx, left + cellPx, top + cellPx, isHorizontal = true)
+                                }
                             }
                         }
                     }
@@ -451,6 +539,11 @@ fun BattleScreen(viewModel: GameViewModel) {
 
                 // Render Placed Towers
                 towers.forEach { tower ->
+                    val spelledGen = viewModel.getSpelledGeneral(tower, towers)
+                    val basicUnits = setOf("兵", "马", "弓", "刀", "枪", "盾", "骑")
+                    val isGeneralComponent = !basicUnits.contains(tower.char)
+                    val isActive = !isGeneralComponent || spelledGen != null
+
                     Box(
                         modifier = Modifier
                             .offset(
@@ -458,41 +551,90 @@ fun BattleScreen(viewModel: GameViewModel) {
                                 y = cellSize * tower.gridY + (cellSize * 0.05f)
                             )
                             .size(cellSize * 0.9f)
-                            .background(PlotColor, RoundedCornerShape(4.dp))
-                            .border(1.5.dp, TextBrushColor, RoundedCornerShape(4.dp)),
+                            .then(
+                                if (isActive) {
+                                    Modifier
+                                        .background(
+                                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                                colors = listOf(Color(0xFFF7EFE0), Color(0xFFDFCAA5))
+                                            ),
+                                            shape = RoundedCornerShape(6.dp)
+                                        )
+                                        .border(
+                                            width = if (isGeneralComponent) 2.5.dp else 1.5.dp,
+                                            color = if (isGeneralComponent) Color(0xFFC7923E) else Color(0xFF6E5638),
+                                            shape = RoundedCornerShape(6.dp)
+                                        )
+                                } else {
+                                    Modifier
+                                        .background(PlotColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .border(
+                                            width = 1.5.dp,
+                                            color = Color.Gray.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        )
+                                }
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = tower.char,
-                            fontSize = when (tower.char.length) {
-                                1 -> (cellSize.value * 0.5f).sp
-                                2 -> (cellSize.value * 0.35f).sp
-                                else -> (cellSize.value * 0.28f).sp
-                            },
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Serif,
-                            color = TextBrushColor
-                        )
-
-                        // Render Wing/Feather icon for specific characters (e.g. 翼)
-                        if (tower.char.contains("翼") || tower.char == "骑") {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize().padding(2.dp)
+                        ) {
                             Text(
-                                text = "🪶",
-                                fontSize = (cellSize.value * 0.25f).sp,
-                                modifier = Modifier.align(Alignment.BottomEnd)
+                                text = tower.char,
+                                fontSize = when (tower.char.length) {
+                                    1 -> (cellSize.value * 0.45f).sp
+                                    2 -> (cellSize.value * 0.32f).sp
+                                    else -> (cellSize.value * 0.25f).sp
+                                },
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Serif,
+                                color = if (isActive) TextBrushColor else Color.Gray.copy(alpha = 0.8f)
                             )
+
+                            // Tiny spelled general name at the bottom
+                            if (isGeneralComponent && spelledGen != null) {
+                                Text(
+                                    text = spelledGen,
+                                    fontSize = (cellSize.value * 0.18f).sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF8B5E3C),
+                                    fontFamily = FontFamily.Serif
+                                )
+                            } else if (isGeneralComponent && !isActive) {
+                                Text(
+                                    text = "待唤醒",
+                                    fontSize = (cellSize.value * 0.16f).sp,
+                                    color = Color.Red.copy(alpha = 0.7f),
+                                    fontFamily = FontFamily.Serif
+                                )
+                            }
                         }
 
-                        // Star label
-                        Text(
-                            text = tower.star.toString(),
-                            fontSize = (cellSize.value * 0.22f).sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFC7923E),
+                        // Star label (lvl marker)
+                        Box(
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
                                 .padding(end = 2.dp, top = 2.dp)
-                        )
+                        ) {
+                            Text(
+                                text = "★" + tower.star,
+                                fontSize = (cellSize.value * 0.18f).sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isActive) Color(0xFFC7923E) else Color.Gray
+                            )
+                        }
+
+                        // Feather/Wing icon for specific active generals
+                        if (isActive && (tower.char.contains("翼") || tower.char == "骑" || spelledGen == "赵云")) {
+                            Text(
+                                text = "🪶",
+                                fontSize = (cellSize.value * 0.2f).sp,
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp)
+                            )
+                        }
                     }
                 }
 
@@ -505,13 +647,18 @@ fun BattleScreen(viewModel: GameViewModel) {
                                 y = cellSize * enemy.y + (cellSize * 0.1f)
                             )
                             .size(cellSize * 0.8f)
-                            .background(EnemyRedColor, CircleShape)
-                            .border(1.dp, TextBrushColor, CircleShape),
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                    colors = listOf(Color(0xFFE57373), Color(0xFFB71C1C))
+                                ),
+                                shape = CircleShape
+                            )
+                            .border(2.dp, Color(0xFF5A0000), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = enemy.char,
-                            fontSize = (cellSize.value * 0.4f).sp,
+                            fontSize = (cellSize.value * 0.38f).sp,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Serif,
                             color = Color.White
@@ -521,17 +668,18 @@ fun BattleScreen(viewModel: GameViewModel) {
                         val hpPercent = enemy.currentHp.toFloat() / enemy.maxHp.toFloat()
                         Canvas(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(3.dp)
+                                .fillMaxWidth(0.8f)
+                                .height(4.dp)
                                 .align(Alignment.BottomCenter)
+                                .padding(bottom = 2.dp)
                         ) {
                             drawRect(
-                                color = Color.Gray,
+                                color = Color(0x66000000),
                                 topLeft = Offset(0f, 0f),
                                 size = Size(size.width, size.height)
                             )
                             drawRect(
-                                color = Color.Green,
+                                color = Color(0xFF4CAF50),
                                 topLeft = Offset(0f, 0f),
                                 size = Size(size.width * hpPercent, size.height)
                             )
@@ -591,26 +739,29 @@ fun BattleScreen(viewModel: GameViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // House Icon (营)
+                // House Icon (营) - Designed like a wood-carved Chinese roof plate
                 Box(
                     modifier = Modifier
                         .size(45.dp)
-                        .background(Color(0xFF8B7355), RoundedCornerShape(4.dp))
-                        .border(1.5.dp, TextBrushColor, RoundedCornerShape(4.dp)),
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(Color(0xFF8B7355), Color(0xFF5C4731))
+                            ),
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        .border(2.dp, Color(0xFF3D2E20), RoundedCornerShape(6.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "营",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Serif,
-                            color = Color.White
-                        )
-                    }
+                    Text(
+                        text = "营",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Serif,
+                        color = Color.White
+                    )
                 }
 
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 // 5 Hand Queue Slots
                 Row(
@@ -623,11 +774,16 @@ fun BattleScreen(viewModel: GameViewModel) {
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
-                                .background(PlotColor, RoundedCornerShape(4.dp))
+                                .background(
+                                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        colors = listOf(Color(0xFFFCFAF2), Color(0xFFF0E6D2))
+                                    ),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
                                 .border(
-                                    width = if (isSelected) 2.5.dp else 1.dp,
-                                    color = if (isSelected) Color(0xFFD32F2F) else TextBrushColor,
-                                    shape = RoundedCornerShape(4.dp)
+                                    width = if (isSelected) 2.5.dp else 1.5.dp,
+                                    color = if (isSelected) Color(0xFFD32F2F) else Color(0xFFB5A482),
+                                    shape = RoundedCornerShape(6.dp)
                                 )
                                 .clickable { viewModel.selectHandSlot(index) },
                             contentAlignment = Alignment.Center
@@ -648,32 +804,44 @@ fun BattleScreen(viewModel: GameViewModel) {
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Large Conscript Button
-            Button(
-                onClick = { viewModel.conscript() },
-                enabled = shopQueue.contains(null) && peaches >= viewModel.getConscriptionCost(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF8C5333),
-                    disabledContainerColor = Color.LightGray
-                ),
-                contentPadding = PaddingValues(horizontal = 12.dp),
-                shape = RoundedCornerShape(4.dp),
+            // Large Conscript Button - Revamped to wood gradient with gold peach cost
+            val conscriptEnabled = shopQueue.contains(null) && peaches >= viewModel.getConscriptionCost()
+            Box(
                 modifier = Modifier
-                    .width(90.dp)
-                    .height(45.dp)
+                    .width(95.dp)
+                    .height(46.dp)
+                    .then(
+                        if (conscriptEnabled) {
+                            Modifier
+                                .background(
+                                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        colors = listOf(Color(0xFF9E6F4B), Color(0xFF6B4226))
+                                    ),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .border(2.dp, Color(0xFF422817), RoundedCornerShape(6.dp))
+                                .clickable { viewModel.conscript() }
+                        } else {
+                            Modifier
+                                .background(Color.LightGray, RoundedCornerShape(6.dp))
+                                .border(1.5.dp, Color.Gray, RoundedCornerShape(6.dp))
+                        }
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "征兵",
-                        fontSize = 14.sp,
+                        text = "征 兵",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Serif,
-                        color = Color.White
+                        color = if (conscriptEnabled) Color.White else Color.DarkGray
                     )
                     Text(
                         text = "🍑 ${viewModel.getConscriptionCost()}",
-                        fontSize = 10.sp,
-                        color = Color.White
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (conscriptEnabled) Color(0xFFFFD54F) else Color.DarkGray
                     )
                 }
             }
@@ -723,22 +891,36 @@ fun BattleScreen(viewModel: GameViewModel) {
                 onClick = { viewModel.usePeachItem() }
             )
 
-            // Start Wave Button
-            Button(
-                onClick = { viewModel.startWave() },
-                enabled = !waveInProgress,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B8E23)),
-                shape = RoundedCornerShape(4.dp),
+            // Start Wave Button - Revamped to Jade Green "战鼓起"
+            Box(
                 modifier = Modifier
                     .weight(1.5f)
-                    .height(40.dp)
+                    .height(42.dp)
+                    .then(
+                        if (!waveInProgress) {
+                            Modifier
+                                .background(
+                                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        colors = listOf(Color(0xFF66BB6A), Color(0xFF2E7D32))
+                                    ),
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .border(2.dp, Color(0xFF1B5E20), RoundedCornerShape(6.dp))
+                                .clickable { viewModel.startWave() }
+                        } else {
+                            Modifier
+                                .background(Color.LightGray, RoundedCornerShape(6.dp))
+                                .border(1.5.dp, Color.Gray, RoundedCornerShape(6.dp))
+                        }
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "▶ 开战",
-                    fontSize = 14.sp,
+                    text = "▶  战 鼓 起",
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Serif,
-                    color = Color.White
+                    color = if (!waveInProgress) Color.White else Color.DarkGray
                 )
             }
         }
@@ -753,24 +935,38 @@ fun ActionButton(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isActive) Color(0xFFD32F2F) else Color(0xFF8B8B7A)
-        ),
-        shape = RoundedCornerShape(4.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp),
+    Box(
         modifier = Modifier
-            .width(60.dp)
-            .height(40.dp)
+            .width(62.dp)
+            .height(42.dp)
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    colors = if (isActive) {
+                        listOf(Color(0xFFE53935), Color(0xFFB71C1C)) // active red seal
+                    } else {
+                        listOf(Color(0xFF8D8D7B), Color(0xFF6B6B59)) // inactive stone seal
+                    }
+                ),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .border(
+                width = if (isActive) 2.dp else 1.dp,
+                color = if (isActive) Color(0xFFFFD54F) else Color(0xFF4E4E3E),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = iconText, fontSize = 14.sp)
-            Text(text = label, fontSize = 10.sp, color = Color.White, fontFamily = FontFamily.Serif)
-            Text(text = description, fontSize = 7.sp, color = Color.White.copy(alpha = 0.8f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = iconText, fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(2.dp))
+                Text(text = label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, fontFamily = FontFamily.Serif)
+            }
+            Text(text = description, fontSize = 7.sp, color = Color.White.copy(alpha = 0.9f))
         }
     }
 }

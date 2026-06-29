@@ -532,31 +532,53 @@ class GameViewModel : ViewModel() {
 
         // 3. Towers Attack
         _towers.value = _towers.value.map { tower ->
-            if (currentTime >= tower.lastAttackTime + tower.attackIntervalMs) {
-                // Find enemy in range
-                val target = findEnemyInRange(tower, remainingEnemies)
-                if (target != null) {
-                    // Fire projectile
-                    val projType = when (tower.char) {
-                        "弓", "黄忠" -> "arrow"
-                        "诸葛亮", "周瑜" -> "lightning"
-                        else -> "slash"
+            val spelledGen = getSpelledGeneral(tower, _towers.value)
+            val basicUnits = setOf("兵", "马", "弓", "刀", "枪", "盾", "骑")
+            val isGeneralComponent = !basicUnits.contains(tower.char)
+
+            if (isGeneralComponent && spelledGen == null) {
+                // Inactive general component, does not attack
+                tower
+            } else {
+                // Active! Calculate temporary stats for the general if spelled
+                val (finalDmg, finalRng, finalInterval) = if (isGeneralComponent && spelledGen != null) {
+                    SynthesisEngine.getCharacterAttributes(spelledGen, tower.star)
+                } else {
+                    Triple(tower.damage, tower.range, tower.attackIntervalMs)
+                }
+
+                if (currentTime >= tower.lastAttackTime + finalInterval) {
+                    // Find enemy in range
+                    val dummyTower = tower.copy(range = finalRng)
+                    val target = findEnemyInRange(dummyTower, remainingEnemies)
+                    if (target != null) {
+                        // Fire projectile
+                        val checkChar = if (isGeneralComponent && spelledGen != null) {
+                            if (spelledGen.startsWith("伪·")) spelledGen.substring(2) else spelledGen
+                        } else {
+                            tower.char
+                        }
+                        val projType = when (checkChar) {
+                            "弓", "黄忠" -> "arrow"
+                            "诸葛亮", "周瑜", "司马懿" -> "lightning"
+                            else -> "slash"
+                        }
+                        val projectile = Projectile(
+                            currentX = tower.gridX.toFloat() + 0.5f,
+                            currentY = tower.gridY.toFloat() + 0.5f,
+                            targetEnemyId = target.id,
+                            damage = finalDmg,
+                            speed = 0.15f,
+                            type = projType
+                        )
+                        currentProjectiles.add(projectile)
+                        tower.copy(lastAttackTime = currentTime)
+                    } else {
+                        tower
                     }
-                    val projectile = Projectile(
-                        currentX = tower.gridX.toFloat() + 0.5f,
-                        currentY = tower.gridY.toFloat() + 0.5f,
-                        targetEnemyId = target.id,
-                        damage = tower.damage,
-                        speed = 0.15f,
-                        type = projType
-                    )
-                    currentProjectiles.add(projectile)
-                    tower.copy(lastAttackTime = currentTime)
                 } else {
                     tower
                 }
-            } else {
-                tower
             }
         }
         _projectiles.value = currentProjectiles
@@ -624,6 +646,37 @@ class GameViewModel : ViewModel() {
             }
         }
         return bestTarget
+    }
+
+    fun getSpelledGeneral(tower: Tower, allTowers: List<Tower>): String? {
+        val basicUnits = setOf("兵", "马", "弓", "刀", "枪", "盾", "骑")
+        if (basicUnits.contains(tower.char)) return null
+
+        for (other in allTowers) {
+            if (other.id == tower.id) continue
+
+            // Horizontal spelling: tower is left, other is right
+            if (other.gridX == tower.gridX + 1 && other.gridY == tower.gridY) {
+                val spelling = SynthesisEngine.checkSpelling(tower.char, other.char)
+                if (spelling != null) return spelling
+            }
+            // Vertical spelling: tower is top, other is below
+            if (other.gridX == tower.gridX && other.gridY == tower.gridY + 1) {
+                val spelling = SynthesisEngine.checkSpelling(tower.char, other.char)
+                if (spelling != null) return spelling
+            }
+            // Horizontal spelling: other is left, tower is right
+            if (tower.gridX == other.gridX + 1 && tower.gridY == other.gridY) {
+                val spelling = SynthesisEngine.checkSpelling(other.char, tower.char)
+                if (spelling != null) return spelling
+            }
+            // Vertical spelling: other is top, tower is below
+            if (tower.gridX == other.gridX && tower.gridY == other.gridY + 1) {
+                val spelling = SynthesisEngine.checkSpelling(other.char, tower.char)
+                if (spelling != null) return spelling
+            }
+        }
+        return null
     }
 
     private fun triggerRockets() {

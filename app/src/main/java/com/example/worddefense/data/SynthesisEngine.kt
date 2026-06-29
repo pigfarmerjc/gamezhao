@@ -44,59 +44,34 @@ object SynthesisEngine {
             if (basicPair.contains("盾")) return "盾"
         }
 
-        // Rule 3: True General Synthesis
+        return null
+    }
+
+    /**
+     * Checks if placing first and second adjacent in reading order forms a valid general.
+     * Returns the name of the general/sub-general/wildcard general, or null.
+     */
+    fun checkSpelling(first: String, second: String): String? {
+        // True General spelling (e.g. 赵 + 云 -> 赵云)
         for (gen in generalsList) {
             if (gen.characters.size == 2) {
-                val char1 = gen.characters[0]
-                val char2 = gen.characters[1]
-                if ((charA == char1 && charB == char2) || (charA == char2 && charB == char1)) {
+                if (gen.characters[0] == first && gen.characters[1] == second) {
                     return gen.name
                 }
             }
         }
 
-        // Rule 4: Sub-general / Custom general synthesis (Surname + 平 = [Surname]平)
+        // Sub-general spelling (e.g. 关 + 平 -> 关平)
         val surnames = generalsList.map { it.characters[0] }.toSet()
-        if (charB == "平" && surnames.contains(charA)) {
-            return charA + "平"
-        }
-        if (charA == "平" && surnames.contains(charB)) {
-            return charB + "平"
+        if (second == "平" && surnames.contains(first)) {
+            return first + "平"
         }
 
-        // Rule 5: Wildcard synthesis (Surname + 通 = 伪·GeneralName)
-        if (charB == "通" && surnames.contains(charA)) {
-            val matchedGen = generalsList.find { it.characters[0] == charA }
+        // Wildcard spelling (e.g. 关 + 通 -> 伪·关羽)
+        if (second == "通" && surnames.contains(first)) {
+            val matchedGen = generalsList.find { it.characters[0] == first }
             if (matchedGen != null) {
                 return "伪·${matchedGen.name}"
-            }
-        }
-        if (charA == "通" && surnames.contains(charB)) {
-            val matchedGen = generalsList.find { it.characters[0] == charB }
-            if (matchedGen != null) {
-                return "伪·${matchedGen.name}"
-            }
-        }
-
-        // Rule 6: Upgrade Wildcard to True General (e.g. 伪·关羽 + 羽 = 关羽)
-        if (charA.startsWith("伪·")) {
-            val targetGenName = charA.substring(2)
-            val gen = getGeneralByName(targetGenName)
-            if (gen != null && gen.characters.size == 2) {
-                val missingChar = gen.characters[1] // e.g. "羽"
-                if (charB == missingChar) {
-                    return gen.name
-                }
-            }
-        }
-        if (charB.startsWith("伪·")) {
-            val targetGenName = charB.substring(2)
-            val gen = getGeneralByName(targetGenName)
-            if (gen != null && gen.characters.size == 2) {
-                val missingChar = gen.characters[1]
-                if (charA == missingChar) {
-                    return gen.name
-                }
             }
         }
 
